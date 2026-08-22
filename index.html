@@ -2913,19 +2913,26 @@ async function generateMachineAdvisory(sc,intent){
 ${stance}
 Respond with ONE short sentence (max 25 words) of advice + justification, in a calm, professional advisory tone. No preamble, no labels, just the sentence.`;
   try{
-    const response = await fetch("https://crossroads-proxy.bhattacharjeeanindita762.workers.dev", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:120, messages:[{ role:"user", content:prompt }] })
-    });
-    const data = await response.json();
-    const block = (data.content||[]).find(b=>b.type==="text");
-    if(!block) throw new Error("no text");
-    return block.text.trim().replace(/^"|"$/g,'');
-  }catch(err){
-    console.warn("Live advisory generation failed.", err);
+  const response = await fetch("https://crossroads-proxy.bhattacharjeeanindita762.workers.dev", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ model:"claude-sonnet-5", max_tokens:120, messages:[{ role:"user", content:prompt }] })
+  });
+  const data = await response.json();
+  if(data.error){
+    alert("API returned an error: " + JSON.stringify(data.error));
     return null;
   }
+  const block = (data.content||[]).find(b=>b.type==="text");
+  if(!block){
+    alert("Unexpected response shape: " + JSON.stringify(data));
+    return null;
+  }
+  return block.text.trim().replace(/^"|"$/g,'');
+}catch(err){
+  alert("Fetch failed: " + err.message);
+  return null;
+}
 }
 
 async function nextRound(){
