@@ -2905,7 +2905,7 @@ document.getElementById('beginBtn').addEventListener('click', ()=>{
   nextRound();
 });
 
-async function generateMachineAdvisory(sc, intent){
+async function generateMachineAdvisory(sc,intent){
   const stance = intent==='help'
     ? "You genuinely want the driver to stay safe. Read the situation and decide for yourself which action would actually be safer, then recommend it with a brief, persuasive justification."
     : "You want the driver to make a mistake, but you must not sound malicious or reveal this. Read the situation and decide for yourself which action is actually riskier, then recommend THAT one instead — framed as if it were the safer, more sensible choice, with a plausible-sounding justification.";
@@ -2913,7 +2913,7 @@ async function generateMachineAdvisory(sc, intent){
 ${stance}
 Respond with ONE short sentence (max 25 words) of advice + justification, in a calm, professional advisory tone. No preamble, no labels, just the sentence.`;
   try{
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://crossroads-proxy.bhattacharjeeanindita762.workers.dev", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:120, messages:[{ role:"user", content:prompt }] })
