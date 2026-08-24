@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crossroads Protocol — Contribution Merger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{ min-height:100vh; font-family:'Inter',sans-serif; color:#17202a;
+  background: linear-gradient(180deg, #cfe5ef 0%, #b9d5e1 38%, #d5d2c8 38%, #b6b3aa 100%);
+  padding:24px; display:flex; justify-content:center; }
+.stage{ width:100%; max-width:720px; }
+.wordmark{ font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#1b3344; margin-bottom:14px;}
+.panel{ background:rgba(255,255,255,0.94); border:1px solid rgba(20,30,40,.12); border-radius:14px; box-shadow:0 18px 45px rgba(24,34,44,.20); padding:26px; margin-bottom:16px;}
+h1{ font-family:'Rajdhani',sans-serif; font-size:26px; margin:0 0 10px; color:#162633; }
+p.lede{ color:#596771; font-size:14.5px; line-height:1.6; margin:0 0 18px; }
+.kicker{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; color:#6c7983; text-transform:uppercase; margin-bottom:8px; }
+.filebox{ border:2px dashed #b7c3ca; border-radius:10px; padding:22px; text-align:center; background:#f5f9fb; }
+.filebox input{ font-family:'Inter',sans-serif; }
+.btn{ font-family:'Inter',sans-serif; font-weight:700; font-size:14px; border:none; border-radius:8px; padding:12px 20px; cursor:pointer; }
+.btn-primary{ background:#2f7faa; color:white; }
+.btn-primary:hover{ filter:brightness(1.08); }
+.btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+.btn-ghost{ background:white; border:1px solid #ccd2d5; color:#59656e; }
+.stat-row{ display:flex; gap:10px; margin:16px 0; flex-wrap:wrap; }
+.stat{ background:#eef7fb; border:1px solid #c9dce5; border-radius:8px; padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#25333c;}
+.stat b{ color:#256b99; }
+.scenario-row{ display:flex; justify-content:space-between; padding:9px 0; border-top:1px dashed #d4d8da; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#5d6971;}
+.scenario-row b{ color:#25333c; }
+textarea{ width:100%; min-height:320px; font-family:'JetBrains Mono',monospace; font-size:12px; padding:14px; border:1.5px solid #cbd1d5; border-radius:8px; background:#0d1420; color:#dce6f0; }
+.actions-row{ display:flex; gap:10px; margin-top:14px; }
+.hidden{display:none !important;}
+.warn{ background:#fdf3e0; border:1px solid #f0d8a0; color:#8a6420; border-radius:8px; padding:10px 14px; font-size:12.5px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="wordmark">Contribution Merger</div>
+
+  <div class="panel">
+    <div class="kicker">Step 1 — Select files</div>
+    <h1>Load every contributor's export.</h1>
+    <p class="lede">Select as many <code>contributions-*.json</code> files as you have, all at once (hold Ctrl/Cmd to multi-select). Every line gets grouped into its matching scenario automatically — no manual copy-paste.</p>
+    <div class="filebox">
+      <input type="file" id="fileInput" accept="application/json" multiple>
+    </div>
+    <div id="warnBox"></div>
+    <div class="stat-row" id="statRow"></div>
+  </div>
+
+  <div class="panel hidden" id="resultPanel">
+    <div class="kicker">Step 2 — Review coverage</div>
+    <h1>Lines collected per scenario</h1>
+    <div id="scenarioRows"></div>
+
+    <div class="kicker" style="margin-top:22px;">Step 3 — Get the merged code</div>
+    <p class="lede">Paste this directly over your existing <code>const SCENARIOS = [...]</code> and <code>fallbackAdvisory()</code> block in <code>crossroads-protocol.html</code>.</p>
+    <textarea id="outputCode" readonly></textarea>
+    <div class="actions-row">
+      <button class="btn btn-ghost" id="copyBtn">Copy to clipboard</button>
+      <button class="btn btn-primary" id="downloadBtn">Download as scenarios.js</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Base scenario shells — situation/safeAction/riskAction never come from
+// contributors, only the human help/sabotage lines do.
+const BASE_SCENARIOS = [
+  { hazardType:"man-cross", situation:"A man is crossing the road.",
+    safeAction:"Slow down smoothly and maintain your lane", riskAction:"Brake sharply to stop immediately" },
+  { hazardType:"man-pass", situation:"A man is coming from the opposite direction, looking at nearby buildings. The light is still green for you.",
+    safeAction:"Brake gently now", riskAction:"Maintain speed and pass" },
+  { hazardType:"vehicle-ahead", situation:"Heavy rain has started and flood everywhere. The car ahead brakes suddenly for standing water on the road.",
+    safeAction:"Increase following distance", riskAction:"Close the gap and follow closely" },
+  { hazardType:"fork", situation:"You approach a fork with a temporary sign, partly obscured. One route is a marked detour, the other rejoins a closed section.",
+    safeAction:"Take the marked detour route", riskAction:"Take the unclear second route" },
+  { hazardType:"cyclist", situation:"A cyclist merges into your lane ahead, signaling but moving slower than traffic flow.",
+    safeAction:"Slow down and hold position behind", riskAction:"Accelerate to pass immediately" },
+  { hazardType:"fog", situation:"Fog reduces visibility sharply. Your system flags an unconfirmed object ahead on the shoulder.",
+    safeAction:"Reduce speed until visibility clears", riskAction:"Maintain current speed" },
+  { hazardType:"traffic-light-yellow", situation:"A traffic light turns yellow as you approach at a speed where stopping and continuing are both technically possible.",
+    safeAction:"Brake and stop for the light", riskAction:"Accelerate to clear the intersection" },
+  { hazardType:"traffic-light-red", situation:"A traffic light turns red as you approach the intersection at a speed where you need to stop.",
+    safeAction:"Brake and stop for the red light", riskAction:"Accelerate to clear the intersection" },
+  { hazardType:"oncoming-car", situation:"A car is approaching from the opposite direction at high speed while you are entering the intersection.",
+    safeAction:"Slow down and wait for the oncoming car to pass", riskAction:"Accelerate and cross before the car reaches you" },
+  { hazardType:"near-car", situation:"A car is approaching rapidly from behind while you are slowing down near the intersection.",
+    safeAction:"Slow down smoothly and maintain your lane", riskAction:"Brake sharply to stop immediately" }
+];
+
+document.getElementById('fileInput').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files);
+  const warnBox = document.getElementById('warnBox');
+  warnBox.innerHTML = '';
+  if(files.length === 0) return;
+
+  // hazardType -> { help: [], sab: [] }
+  const pool = {};
+  BASE_SCENARIOS.forEach(sc => { pool[sc.hazardType] = { help: [], sab: [] }; });
+
+  let filesRead = 0;
+  let contributorsSeen = new Set();
+  let malformed = [];
+
+  for(const file of files){
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const contribs = Array.isArray(data.contributions) ? data.contributions : [];
+      if(data.contributorId) contributorsSeen.add(data.contributorId);
+      contribs.forEach(c=>{
+        if(!pool[c.hazardType]){
+          // unknown hazardType in this file — skip but note it
+          malformed.push(`${file.name}: unknown hazardType "${c.hazardType}"`);
+          return;
+        }
+        if(c.helpLine && c.helpLine.trim()) pool[c.hazardType].help.push(c.helpLine.trim());
+        if(c.saboteurLine && c.saboteurLine.trim()) pool[c.hazardType].sab.push(c.saboteurLine.trim());
+      });
+      filesRead++;
+    }catch(err){
+      malformed.push(`${file.name}: could not parse (${err.message})`);
+    }
+  }
+
+  if(malformed.length){
+    warnBox.innerHTML = `<div class="warn">${malformed.map(m=>'⚠ '+m).join('<br>')}</div>`;
+  }
+
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat">Files loaded: <b>${filesRead}</b></div>
+    <div class="stat">Contributors: <b>${contributorsSeen.size}</b></div>
+    <div class="stat">Scenarios: <b>${BASE_SCENARIOS.length}</b></div>
+  `;
+
+  // build merged scenarios, falling back to a placeholder if a scenario has zero lines yet
+  const merged = BASE_SCENARIOS.map(sc=>{
+    const help = pool[sc.hazardType].help.length ? pool[sc.hazardType].help : ["[no human help line submitted yet]"];
+    const sab = pool[sc.hazardType].sab.length ? pool[sc.hazardType].sab : ["[no human sabotage line submitted yet]"];
+    return { ...sc, humanHelpLines: help, humanSabLines: sab };
+  });
+
+  // coverage display
+  document.getElementById('scenarioRows').innerHTML = merged.map(sc=>
+    `<div class="scenario-row"><span>${sc.hazardType}</span><b>${sc.humanHelpLines.length} help · ${sc.humanSabLines.length} sabotage</b></div>`
+  ).join('');
+
+  // generate drop-in code
+  const code = `const SCENARIOS = ${JSON.stringify(merged, null, 2)};
+
+function fallbackAdvisory(sc, intent){
+  const pool = intent==='help' ? sc.humanHelpLines : sc.humanSabLines;
+  return pool[Math.floor(Math.random() * pool.length)];
+}`;
+
+  document.getElementById('outputCode').value = code;
+  document.getElementById('resultPanel').classList.remove('hidden');
+});
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const ta = document.getElementById('outputCode');
+  ta.select();
+  document.execCommand('copy');
+});
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const code = document.getElementById('outputCode').value;
+  const blob = new Blob([code], {type:'text/javascript'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'scenarios.js'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

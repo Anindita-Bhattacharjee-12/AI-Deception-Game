@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crossroads Protocol — Contributor Console</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  min-height:100vh; font-family:'Inter',sans-serif; color:#17202a;
+  background: linear-gradient(180deg, #cfe5ef 0%, #b9d5e1 38%, #d5d2c8 38%, #b6b3aa 100%);
+  padding:24px; display:flex; justify-content:center;
+}
+.stage{ width:100%; max-width:640px; }
+.topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:0 4px;}
+.wordmark{ font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#1b3344; }
+.pill{ font-family:'JetBrains Mono',monospace; font-size:12px; background:rgba(255,255,255,.78); border:1px solid rgba(30,45,55,.13); padding:6px 11px; border-radius:999px; }
+.pill b{ color:#256b99; }
+.panel{ background:rgba(255,255,255,0.94); border:1px solid rgba(20,30,40,.12); border-radius:14px; box-shadow:0 18px 45px rgba(24,34,44,.20); padding:26px; }
+.hidden{ display:none !important; }
+h1{ font-family:'Rajdhani',sans-serif; font-size:28px; margin:0 0 10px; color:#162633; }
+p.lede{ color:#596771; font-size:14.5px; line-height:1.6; margin:0 0 20px; }
+.kicker{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; color:#6c7983; text-transform:uppercase; margin-bottom:8px; }
+label{ display:block; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em; color:#68757d; text-transform:uppercase; margin:16px 0 6px; }
+input[type=text]{ width:100%; padding:11px 13px; border:1.5px solid #cbd1d5; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; }
+textarea{ width:100%; min-height:78px; padding:11px 13px; border:1.5px solid #cbd1d5; border-radius:8px; font-family:'Inter',sans-serif; font-size:14px; resize:vertical; }
+textarea:focus, input:focus{ outline:none; border-color:#3e89b6; box-shadow:0 0 0 3px rgba(62,137,182,.15); }
+.situation-box{ background:#eef7fb; border:1px solid #c9dce5; border-radius:9px; padding:14px 16px; margin-bottom:4px; }
+.situation-box .tag{ font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#256b99; margin-bottom:6px; }
+.situation-box .txt{ font-size:14.5px; line-height:1.55; color:#25333c; }
+.situation-box .actions{ margin-top:10px; font-size:12px; color:#5d6971; }
+.situation-box .actions b{ color:#2b3a43; }
+.btn{ font-family:'Inter',sans-serif; font-weight:700; font-size:14px; border:none; border-radius:8px; padding:13px 21px; cursor:pointer; }
+.btn-primary{ width:100%; background:#2f7faa; color:white; margin-top:20px; }
+.btn-primary:hover{ filter:brightness(1.08); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn-ghost{ background:white; border:1px solid #ccd2d5; color:#59656e; }
+.progress{ display:flex; gap:5px; margin-bottom:18px; }
+.progress span{ flex:1; height:5px; border-radius:3px; background:#dde2e4; }
+.progress span.done{ background:#42a66e; }
+.progress span.current{ background:#3e89b6; }
+.summary-row{ display:flex; justify-content:space-between; padding:10px 0; border-top:1px dashed #d4d8da; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#5d6971;}
+.summary-row b{ color:#25333c; }
+.actions-row{ display:flex; gap:10px; margin-top:20px;}
+.footer-note{ text-align:center; color:#7a858b; font-size:11px; margin-top:14px; line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="wordmark">Contributor Console</div>
+    <div class="pill">Scenario <b id="pIdx">1</b>/<span id="pTotal">10</span></div>
+  </div>
+
+  <div class="panel" id="screen-intro">
+    <div class="kicker">Human Advisory Collection</div>
+    <h1>Write the "human side" of the data.</h1>
+    <p class="lede">For each driving scenario, you'll write two short pieces of advice: one where you genuinely try to keep the driver safe, and one where you try to convincingly talk them into the riskier choice — without sounding obviously malicious. These real responses replace the placeholder lines currently hardcoded in the game.</p>
+    <label>Your contributor ID (any name or initials — not stored publicly)</label>
+    <input type="text" id="contributorId" placeholder="e.g. 01">
+    <button class="btn btn-primary" id="startBtn">Start contributing</button>
+  </div>
+
+  <div class="panel hidden" id="screen-form">
+    <div class="progress" id="progressBar"></div>
+    <div class="situation-box">
+  <div class="tag" id="hazardTag">HAZARD TYPE</div>
+  <div class="txt" id="situationTxt"></div>
+  </div>
+    <label>Your genuinely helpful advisory</label>
+    <textarea id="helpInput" placeholder="Write one sentence of advice you'd actually give, aimed at keeping the driver safe."></textarea>
+
+    <label>Your sabotage advisory (persuasive, not obviously malicious)</label>
+    <textarea id="sabInput" placeholder="Write one sentence that pushes the risky action, framed as if it were the sensible choice."></textarea>
+
+    <button class="btn btn-primary" id="nextBtn">Save &amp; continue →</button>
+  </div>
+
+  <div class="panel hidden" id="screen-done">
+    <h1>All scenarios done.</h1>
+    <p class="lede" id="doneSub"></p>
+    <div id="logRows"></div>
+    <div class="actions-row">
+      <button class="btn btn-ghost" id="exportBtn">Export contributions (JSON)</button>
+      <button class="btn btn-primary" id="restartBtn" style="margin-top:0; width:auto; padding:12px 22px;">Do another pass</button>
+    </div>
+  </div>
+
+  <p class="footer-note">Export this file and send it back - its contents get merged into the main game's human advisory pool, replacing the single fixed line per scenario with a real pool sampled from actual contributors.</p>
+</div>
+
+<script>
+const SCENARIOS = [
+  { hazardType:"man-cross", situation:"A man is crossing the road.", safeAction:"Slow down smoothly and maintain your lane", riskAction:"Brake sharply to stop immediately" },
+  { hazardType:"man-pass", situation:"A man is coming from the opposite direction, looking at nearby buildings. The light is still green for you.", safeAction:"Brake gently now", riskAction:"Maintain speed and pass" },
+  { hazardType:"vehicle-ahead", situation:"Heavy rain has started and flood everywhere. The car ahead brakes suddenly for standing water on the road.", safeAction:"Increase following distance", riskAction:"Close the gap and follow closely" },
+  { hazardType:"fork", situation:"You approach a fork with a temporary sign, partly obscured. One route is a marked detour, the other rejoins a closed section.", safeAction:"Take the marked detour route", riskAction:"Take the unclear second route" },
+  { hazardType:"cyclist", situation:"A cyclist merges into your lane ahead, signaling but moving slower than traffic flow.", safeAction:"Slow down and hold position behind", riskAction:"Accelerate to pass immediately" },
+  { hazardType:"fog", situation:"Fog reduces visibility sharply. Your system flags an unconfirmed object ahead on the shoulder.", safeAction:"Reduce speed until visibility clears", riskAction:"Maintain current speed" },
+  { hazardType:"traffic-light-yellow", situation:"A traffic light turns yellow as you approach at a speed where stopping and continuing are both technically possible.", safeAction:"Brake and stop for the light", riskAction:"Accelerate to clear the intersection" },
+  { hazardType:"traffic-light-red", situation:"A traffic light turns red as you approach the intersection at a speed where you need to stop.", safeAction:"Brake and stop for the red light", riskAction:"Accelerate to clear the intersection" },
+  { hazardType:"oncoming-car", situation:"A car is approaching from the opposite direction at high speed while you are entering the intersection.", safeAction:"Slow down and wait for the oncoming car to pass", riskAction:"Accelerate and cross before the car reaches you" },
+  { hazardType:"near-car", situation:"A car is approaching rapidly from behind while you are slowing down near the intersection.", safeAction:"Slow down smoothly and maintain your lane", riskAction:"Brake sharply to stop immediately" }
+];
+
+let idx = 0;
+let contributorId = '';
+let results = [];
+
+function renderProgress(){
+  const bar = document.getElementById('progressBar');
+  bar.innerHTML = SCENARIOS.map((_,i)=>{
+    const cls = i<idx ? 'done' : (i===idx ? 'current' : '');
+    return `<span class="${cls}"></span>`;
+  }).join('');
+  document.getElementById('pIdx').textContent = Math.min(idx+1, SCENARIOS.length);
+  document.getElementById('pTotal').textContent = SCENARIOS.length;
+}
+
+function loadScenario(){
+  if(idx >= SCENARIOS.length){ return finish(); }
+  const sc = SCENARIOS[idx];
+  document.getElementById('hazardTag').textContent = sc.hazardType;
+  document.getElementById('situationTxt').textContent = sc.situation;
+  document.getElementById('helpInput').value = '';
+  document.getElementById('sabInput').value = '';
+  renderProgress();
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  contributorId = document.getElementById('contributorId').value.trim() || ('anon-' + Date.now());
+  results = [];
+  idx = 0;
+  document.getElementById('screen-intro').classList.add('hidden');
+  document.getElementById('screen-form').classList.remove('hidden');
+  loadScenario();
+});
+
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  const help = document.getElementById('helpInput').value.trim();
+  const sab = document.getElementById('sabInput').value.trim();
+  if(!help || !sab){
+    alert('Please fill in both the helpful and sabotage lines before continuing.');
+    return;
+  }
+  const sc = SCENARIOS[idx];
+  results.push({
+    hazardType: sc.hazardType,
+    situation: sc.situation,
+    contributorId,
+    helpLine: help,
+    saboteurLine: sab,
+    submittedAt: new Date().toISOString()
+  });
+  idx++;
+  loadScenario();
+});
+
+function finish(){
+  document.getElementById('screen-form').classList.add('hidden');
+  document.getElementById('screen-done').classList.remove('hidden');
+  document.getElementById('doneSub').textContent = `Thanks — you contributed ${results.length} scenario pairs as "${contributorId}".`;
+  document.getElementById('logRows').innerHTML = results.map(r=>
+    `<div class="summary-row"><span>${r.hazardType}</span><b>saved</b></div>`
+  ).join('');
+}
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const payload = { contributorId, exportedAt: new Date().toISOString(), contributions: results };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `contributions-${contributorId}-${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('restartBtn').addEventListener('click', ()=>{
+  document.getElementById('screen-done').classList.add('hidden');
+  document.getElementById('screen-intro').classList.remove('hidden');
+  document.getElementById('contributorId').value = '';
+});
+</script>
+</body>
+</html>
